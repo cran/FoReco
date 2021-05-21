@@ -23,11 +23,12 @@
 #' \href{https://CRAN.R-project.org/package=hts}{https://CRAN.R-project.org/package=hts}.
 #'
 #' @keywords utilities
+#' @family utilities
 #'
 #' @export
 shrink_estim <- function(x, minT = T) {
   if (is.matrix(x) == TRUE && is.numeric(x) == FALSE) {
-    stop("The data matrix must be numeric!")
+    stop("The data matrix must be numeric!", call. = FALSE)
   }
 
   x <- stats::na.omit(x)

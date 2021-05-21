@@ -313,27 +313,25 @@ knitr::include_graphics("../man/figures/mts12_base.png")
 #                     thf_comb = "acov", hts_comb = "shr",
 #                     res = FoReco_data$res)$recf
 
-## ----ite, eval=FALSE, fig.width = 5, dpi=200, out.width="500px", fig.height=3.5----
+## ----ite, eval=FALSE, message = FALSE, fig.width = 5, dpi=200, out.width="500px", fig.height=3.5----
 #  ite_recf <- iterec(FoReco_data$base,
 #                     m = 12, C = FoReco_data$C,
 #                     thf_comb = "acov", hts_comb = "shr",
 #                     res = FoReco_data$res, start_rec = "thf")$recf
-#  #> ---------------------------------------
-#  #> Iter #  (Cross-sectional incoherence) (Temporal incoherence)
-#  #> thf: 000  (1067.99485989205)  (1426.5513133205)
-#  #> thf: 001  (664.709318459475)  (564.414554571728)
-#  #> thf: 002  (229.380269405745)  (118.752261421519)
-#  #> thf: 003  (24.9431940889919)  (13.6060386528783)
-#  #> thf: 004  (5.37854848829375)  (2.21960789386029)
-#  #> thf: 005  (0.37251625538498)  (0.191544984783356)
-#  #> thf: 006  (0.0972170752758785)  (0.0439395488213421)
-#  #> thf: 007  (0.00744783958359108)  (0.00326627927896794)
-#  #> thf: 008  (0.00119733279655776)  (0.000555450468183949)
-#  #> thf: 009  (0.000118053594384548)  (6.68458906503133e-05)
-#  #> thf: 010  (3.40054562144587e-05)  (1.5193330327179e-05)
-#  #> thf: Convergence (starting from thf) achieved at iteration number 11!
-#  #> thf: Temporal incoherence 1.67142842144585e-06 < 1e-05 tolerance
-#  #> ---------------------------------------
+#  #> --------------------------------------------------------------------------------
+#  #> Iter       # |     Cross-sec. incoherence     |      Temporal incoherence      |
+#  #> thf:       0 |                         159.89 |                         187.63 |
+#  #> thf:       1 |                          60.11 |                          38.77 |
+#  #> thf:       2 |                          18.60 |                           7.73 |
+#  #> thf:       3 |                           1.61 |                       9.91e-01 |
+#  #> thf:       4 |                       4.16e-01 |                       2.07e-01 |
+#  #> thf:       5 |                       3.03e-02 |                       2.00e-02 |
+#  #> thf:       6 |                       9.18e-03 |                       5.31e-03 |
+#  #> thf:       7 |                       5.18e-04 |                       1.98e-04 |
+#  #> thf:       8 |                       1.30e-04 |                       6.45e-05 |
+#  #> thf: Convergence (starting from thf) achieved at iteration number 9!
+#  #> thf: Temporal incoherence 4.94e-06 < 1e-05 tolerance
+#  #> --------------------------------------------------------------------------------
 
 ## ----echo=FALSE, out.width = "300px"------------------------------------------
 knitr::include_graphics("../man/figures/ite.png")

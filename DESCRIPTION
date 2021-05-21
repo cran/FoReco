@@ -1,7 +1,7 @@
 Type: Package
 Package: FoReco
 Title: Point Forecast Reconciliation
-Version: 0.1.1
+Version: 0.2.0
 Authors@R: 
     c(person(given = "Daniele",
              family = "Girolimetto",
@@ -10,24 +10,25 @@ Authors@R:
       person(given = "Tommaso",
              family = "Di Fonzo",
              role = c("aut", "fnd")))
-Description: Provides classical (bottom-up), optimal and heuristic combination 
-    forecast reconciliation procedures for cross-sectional, temporal, and 
-    cross-temporal linearly constrained time series.
+Description: Classical (bottom-up and top-down), optimal and heuristic combination forecast 
+    reconciliation procedures for cross-sectional, temporal, and cross-temporal linearly 
+    constrained time series.
 License: GPL-3
 URL: https://github.com/daniGiro/FoReco,
         https://danigiro.github.io/FoReco/
 BugReports: https://github.com/daniGiro/FoReco/issues
 Depends: R (>= 2.10), Matrix, osqp, stats
-Imports: cli, corpcor, methods, pracma
+Imports: cli, corpcor, methods, mathjaxr
 Suggests: knitr, rmarkdown
+RdMacros: mathjaxr
 VignetteBuilder: knitr
 Encoding: UTF-8
 LazyData: true
 NeedsCompilation: no
 RoxygenNote: 7.1.1
-Packaged: 2020-10-17 13:14:27 UTC; daniele
+Packaged: 2021-05-21 14:47:16 UTC; daniele
 Author: Daniele Girolimetto [aut, cre, fnd],
   Tommaso Di Fonzo [aut, fnd]
 Maintainer: Daniele Girolimetto <daniele.girolimetto@phd.unipd.it>
 Repository: CRAN
-Date/Publication: 2020-10-17 22:20:03 UTC
+Date/Publication: 2021-05-21 15:02:06 UTC

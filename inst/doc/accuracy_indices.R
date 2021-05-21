@@ -32,6 +32,24 @@ df <- cbind(col1 = c("$\\textbf{m}$","$\\textbf{1}$","$\\text{RelA}^{[m],1}_{1,j
 rownames(df) <- c("${\\cal K}$","$\\textbf{h}$","$\\textbf{1}$","$\\vdots$","$\\textbf{i}$","$\\vdots$","$\\textbf{n}$")
 knitr::kable(df,align='ccccccccc',escape = F, col.names = rep("",9))
 
+## ----table-simple2cum, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'----
+df <- cbind(col1 = c("$\\textbf{m}$","$\\textbf{1:1}$","$\\text{RelA}^{[m],1:1}_{1,j}$","$\\vdots$",
+                         "$\\text{RelA}^{[m],1:1}_{i,j}$","$\\vdots$","$\\text{RelA}^{[m],1:1}_{n,j}$"),
+            col2 = c("$\\dots$","$\\dots$","$\\dots$","","$\\dots$","","$\\dots$"),
+            col3 = c("", "$\\textbf{1:1}$","$\\text{RelA}^{[k],1:1}_{1,j}$","$\\vdots$",
+                         "$\\text{RelA}^{[k],1:1}_{i,j}$","$\\vdots$","$\\text{RelA}^{[k],1:1}_{n,j}$"),
+            col4 = c("$\\textbf{k}$","$\\dots$","$\\dots$","","$\\dots$","","$\\dots$"),
+            col5 = c("", "$\\mathbf{1:h_k}$","$\\text{RelA}^{[k],1:h_k}_{1,j}$","$\\vdots$",
+                         "$\\text{RelA}^{[k],1:h_k}_{i,j}$","$\\vdots$","$\\text{RelA}^{[k],1:h_k}_{n,j}$"),
+            col6 = c("$\\dots$","$\\dots$","$\\dots$","","$\\dots$","","$\\dots$"),
+            col7 = c("", "$\\textbf{1:1}$","$\\text{RelA}^{[1],1:1}_{1,j}$","$\\vdots$",
+                         "$\\text{RelA}^{[1],1:1}_{i,j}$","$\\vdots$","$\\text{RelA}^{[1],1:1}_{n,j}$"),
+            col8 = c("$\\textbf{1}$","$\\dots$","$\\dots$","","$\\dots$","","$\\dots$"),
+            col9 = c("", "$\\mathbf{1:m}$","$\\text{RelA}^{[1],1:m}_{1,j}$","$\\vdots$",
+                         "$\\text{RelA}^{[1],1:m}_{i,j}$","$\\vdots$","$\\text{RelA}^{[1],1:m}_{n,j}$"))
+rownames(df) <- c("${\\cal K}$","$\\textbf{h}$","$\\textbf{1}$","$\\vdots$","$\\textbf{i}$","$\\vdots$","$\\textbf{n}$")
+knitr::kable(df,align='ccccccccc',escape = F, col.names = rep("",9))
+
 ## ----table-simple3, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'----
 df <- cbind(col1 = c("$\\textbf{m}$","$\\text{AvgRelA}^{[m]}_{1,j}$","$\\vdots$",
                          "$\\text{AvgRelA}^{[m]}_{i,j}$","$\\vdots$","$\\text{AvgRelA}^{[m]}_{n,j}$"),
@@ -62,6 +80,24 @@ df <- cbind(col1 = c("$\\textbf{m}$","$\\textbf{1}$","$\\text{AvgRelA}^{[m],1}_{
             col8 = c("$\\textbf{1}$","$\\dots$","$\\dots$","$\\dots$","$\\dots$"),
             col9 = c("", "$\\mathbf{m}$","$\\text{AvgRelA}^{[1],m}_{j}$",
                          "$\\text{AvgRelA}^{[1],m}_{a,j}$","$\\text{AvgRelA}^{[1],m}_{b,j}$"))
+rownames(df) <- c("${\\cal K}$","$\\textbf{h}$","$\\textbf{all}$","$\\textbf{a}$","$\\textbf{b}$")
+knitr::kable(df,align='ccccccccc',escape = F, col.names = rep("",9))
+
+## ----table-simple4cum, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'----
+df <- cbind(col1 = c("$\\textbf{m}$","$\\textbf{1:1}$","$\\text{AvgRelA}^{[m],1:1}_{j}$",
+                         "$\\text{AvgRelA}^{[m],1:1}_{a,j}$","$\\text{AvgRelA}^{[m],1:1}_{b,j}$"),
+            col2 = c("$\\dots$","$\\dots$","$\\dots$","$\\dots$","$\\dots$"),
+            col3 = c("", "$\\textbf{1:1}$","$\\text{AvgRelA}^{[k],1:1}_{j}$",
+                         "$\\text{AvgRelA}^{[k],1:1}_{a,j}$","$\\text{AvgRelA}^{[k],1:1}_{b,j}$"),
+            col4 = c("$\\textbf{k}$","$\\dots$","$\\dots$","$\\dots$","$\\dots$"),
+            col5 = c("", "$\\mathbf{1:h_k}$","$\\text{AvgRelA}^{[k],1:h_k}_{j}$",
+                         "$\\text{AvgRelA}^{[k],1:h_k}_{a,j}$","$\\text{AvgRelA}^{[k],1:h_k}_{b,j}$"),
+            col6 = c("$\\dots$","$\\dots$","$\\dots$","$\\dots$","$\\dots$"),
+            col7 = c("", "$\\textbf{1:1}$","$\\text{AvgRelA}^{[1],1:1}_{j}$",
+                         "$\\text{AvgRelA}^{[1],1:1}_{a,j}$","$\\text{AvgRelA}^{[1],1:1}_{b,j}$"),
+            col8 = c("$\\textbf{1}$","$\\dots$","$\\dots$","$\\dots$","$\\dots$"),
+            col9 = c("", "$\\mathbf{1:m}$","$\\text{AvgRelA}^{[1],1:m}_{j}$",
+                         "$\\text{AvgRelA}^{[1],1:m}_{a,j}$","$\\text{AvgRelA}^{[1],1:m}_{b,j}$"))
 rownames(df) <- c("${\\cal K}$","$\\textbf{h}$","$\\textbf{all}$","$\\textbf{a}$","$\\textbf{b}$")
 knitr::kable(df,align='ccccccccc',escape = F, col.names = rep("",9))
 
