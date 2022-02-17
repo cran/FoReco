@@ -1,3 +1,7 @@
+# FoReco 0.2.2
+* Fixed documentation;
+* Removed `ut2c()` and `srref()`.
+
 # FoReco 0.2.1
 
 ##### Minor changes
