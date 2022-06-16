@@ -4,10 +4,10 @@
 \alias{octrec}
 \title{Optimal combination cross-temporal forecast reconciliation}
 \usage{
-octrec(basef, m, C, comb, res, Ut, nb, mse = TRUE,
-       corpcor = FALSE, type = "M", sol = "direct", keep = "list",
-       nn = FALSE, nn_type = "osqp", settings = list(),
-       bounds = NULL, W = NULL, Omega = NULL)
+octrec(basef, m, C, comb, res, Ut, nb, mse = TRUE, corpcor = FALSE,
+       type = "M", sol = "direct", keep = "list", v = NULL, nn = FALSE,
+       nn_type = "osqp", settings = list(), bounds = NULL, W = NULL,
+       Omega = NULL)
 }
 \arguments{
 \item{basef}{(\mjseqn{n \times h(k^\ast+m)}) matrix of base forecasts to be
@@ -32,11 +32,13 @@ mapping the bottom level series into the higher level ones.}
 of variables:
 \itemize{
   \item \bold{ols} (Identity);
-  \item \bold{struc} (Cross-temporal summing matrix);
-  \item \bold{wlsh} (Hierarchy variances matrix);
-  \item \bold{wlsv} (Series variances matrix);
+  \item \bold{struc} (Cross-temporal structural variances);
+  \item \bold{cs_struc} (Cross-sectional structural variances and temporal independence);
+  \item \bold{t_struc} (Cross-sectional independence and temporal structural variances);
+  \item \bold{wlsh} (Hierarchy variances);
+  \item \bold{wlsv} (Series variances);
   \item \bold{bdshr} (Shrunk cross-covariance matrix, cross-sectional framework);
-  \item \bold{bdsam}  (Sample cross-covariance matrix, cross-sectional framework);
+  \item \bold{bdsam} (Sample cross-covariance matrix, cross-sectional framework);
   \item \bold{acov} (Series auto-covariance matrix);
   \item \bold{Sshr} (Series shrunk cross-covariance matrix);
   \item \bold{Ssam} (Series cross-covariance matrix);
@@ -85,6 +87,9 @@ quadratic program using \code{\link[osqp]{solve_osqp}}).}
 \item{keep}{Return a list object of the reconciled forecasts at all levels
 (if keep = "list") or only the reconciled forecasts matrix (if keep = "recf").}
 
+\item{v}{vector index of the fixed base forecast (\mjseqn{\mbox{min}(v) > 0}
+and \mjseqn{\mbox{max}(v) < n(k^\ast + m)}).}
+
 \item{nn}{Logical value: \code{TRUE} if non-negative reconciled forecasts
 are wished.}
 
@@ -124,7 +129,7 @@ on what type of representation (\code{type}) and solution technique
 \item{\code{varf} (\code{type="direct"})}{(\mjseqn{n \times (k^\ast + m)}) reconciled forecasts variance matrix for \mjseqn{h=1}, \mjseqn{\mbox{diag}(\mathbf{MW}}).}
 \item{\code{M} (\code{type="direct"})}{Projection matrix (projection approach).}
 \item{\code{G} (\code{type="S"} and \code{type="direct"})}{Projection matrix (structural approach, \mjseqn{\mathbf{M}=\mathbf{S}\mathbf{G}}).}
-\item{\code{S} (\code{type="S"} and \code{type="direct"})}{Cross-temporal summing matrix (\mjseqn{\widetilde{\textbf{S}}\mbox{vec}(\widehat{\textbf{Y}}')} representation).}
+\item{\code{S} (\code{type="S"} and \code{type="direct"})}{Cross-temporal summing matrix (\mjseqn{\widetilde{\textbf{F}}\mbox{vec}(\widehat{\textbf{Y}}')} representation).}
 \item{\code{info} (\code{type="osqp"})}{matrix with some useful indicators (columns)
 for each forecast horizon \mjseqn{h} (rows): run time (\code{run_time}), number of iteration,
 norm of primal residual (\code{pri_res}), status of osqp's solution (\code{status}) and
@@ -259,9 +264,9 @@ obj <- octrec(FoReco_data$base, m = 12, C = FoReco_data$C,
 Byron, R.P. (1978), The estimation of large social accounts matrices,
 \emph{Journal of the Royal Statistical Society A}, 141, 3, 359-367.
 
-Di Fonzo, T., Girolimetto, D. (2020), Cross-Temporal Forecast Reconciliation:
-Optimal Combination Method and Heuristic Alternatives, Department of Statistical
-Sciences, University of Padua, \href{https://arxiv.org/abs/2006.08570}{arXiv:2006.08570}.
+Di Fonzo, T., and Girolimetto, D. (2021), Cross-temporal forecast reconciliation:
+Optimal combination method and heuristic alternatives, \emph{International Journal
+of Forecasting}, in press.
 
 \enc{Schäfer}{Schafer}, J.L., Opgen-Rhein, R., Zuber, V., Ahdesmaki, M.,
 Duarte Silva, A.P., Strimmer, K. (2017), \emph{Package `corpcor'}, R

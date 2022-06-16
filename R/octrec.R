@@ -7,10 +7,10 @@
 #' projection approach (Byron, 1978), or the equivalent structural approach
 #' by Hyndman et al. (2011).
 #'
-#' @usage octrec(basef, m, C, comb, res, Ut, nb, mse = TRUE,
-#'        corpcor = FALSE, type = "M", sol = "direct", keep = "list",
-#'        nn = FALSE, nn_type = "osqp", settings = list(),
-#'        bounds = NULL, W = NULL, Omega = NULL)
+#' @usage octrec(basef, m, C, comb, res, Ut, nb, mse = TRUE, corpcor = FALSE,
+#'        type = "M", sol = "direct", keep = "list", v = NULL, nn = FALSE,
+#'        nn_type = "osqp", settings = list(), bounds = NULL, W = NULL,
+#'        Omega = NULL)
 #'
 #' @param basef  (\mjseqn{n \times h(k^\ast+m)}) matrix of base forecasts to be
 #' reconciled, \mjseqn{\widehat{\mathbf{Y}}}; \mjseqn{n} is the total number of variables,
@@ -29,11 +29,13 @@
 #' of variables:
 #' \itemize{
 #'   \item \bold{ols} (Identity);
-#'   \item \bold{struc} (Cross-temporal summing matrix);
-#'   \item \bold{wlsh} (Hierarchy variances matrix);
-#'   \item \bold{wlsv} (Series variances matrix);
+#'   \item \bold{struc} (Cross-temporal structural variances);
+#'   \item \bold{cs_struc} (Cross-sectional structural variances and temporal independence);
+#'   \item \bold{t_struc} (Cross-sectional independence and temporal structural variances);
+#'   \item \bold{wlsh} (Hierarchy variances);
+#'   \item \bold{wlsv} (Series variances);
 #'   \item \bold{bdshr} (Shrunk cross-covariance matrix, cross-sectional framework);
-#'   \item \bold{bdsam}  (Sample cross-covariance matrix, cross-sectional framework);
+#'   \item \bold{bdsam} (Sample cross-covariance matrix, cross-sectional framework);
 #'   \item \bold{acov} (Series auto-covariance matrix);
 #'   \item \bold{Sshr} (Series shrunk cross-covariance matrix);
 #'   \item \bold{Ssam} (Series cross-covariance matrix);
@@ -95,6 +97,8 @@
 #' @param bounds (\mjseqn{n(k^\ast + m) \times 2}) matrix of the bounds on the
 #' variables: the first column is the lower bound, and the second column is the
 #' upper bound.
+#' @param v vector index of the fixed base forecast (\mjseqn{\mbox{min}(v) > 0}
+#' and \mjseqn{\mbox{max}(v) < n(k^\ast + m)}).
 #'
 #' @details
 #' Considering contemporaneous and temporal dimensions in the
@@ -222,7 +226,7 @@
 #' \item{\code{varf} (\code{type="direct"})}{(\mjseqn{n \times (k^\ast + m)}) reconciled forecasts variance matrix for \mjseqn{h=1}, \mjseqn{\mbox{diag}(\mathbf{MW}}).}
 #' \item{\code{M} (\code{type="direct"})}{Projection matrix (projection approach).}
 #' \item{\code{G} (\code{type="S"} and \code{type="direct"})}{Projection matrix (structural approach, \mjseqn{\mathbf{M}=\mathbf{S}\mathbf{G}}).}
-#' \item{\code{S} (\code{type="S"} and \code{type="direct"})}{Cross-temporal summing matrix (\mjseqn{\widetilde{\textbf{S}}\mbox{vec}(\widehat{\textbf{Y}}')} representation).}
+#' \item{\code{S} (\code{type="S"} and \code{type="direct"})}{Cross-temporal summing matrix (\mjseqn{\widetilde{\textbf{F}}\mbox{vec}(\widehat{\textbf{Y}}')} representation).}
 #' \item{\code{info} (\code{type="osqp"})}{matrix with some useful indicators (columns)
 #' for each forecast horizon \mjseqn{h} (rows): run time (\code{run_time}), number of iteration,
 #' norm of primal residual (\code{pri_res}), status of osqp's solution (\code{status}) and
@@ -232,9 +236,9 @@
 #' Byron, R.P. (1978), The estimation of large social accounts matrices,
 #' \emph{Journal of the Royal Statistical Society A}, 141, 3, 359-367.
 #'
-#' Di Fonzo, T., Girolimetto, D. (2020), Cross-Temporal Forecast Reconciliation:
-#' Optimal Combination Method and Heuristic Alternatives, Department of Statistical
-#' Sciences, University of Padua, \href{https://arxiv.org/abs/2006.08570}{arXiv:2006.08570}.
+#' Di Fonzo, T., and Girolimetto, D. (2021), Cross-temporal forecast reconciliation:
+#' Optimal combination method and heuristic alternatives, \emph{International Journal
+#' of Forecasting}, in press.
 #'
 #' \enc{Schäfer}{Schafer}, J.L., Opgen-Rhein, R., Zuber, V., Ahdesmaki, M.,
 #' Duarte Silva, A.P., Strimmer, K. (2017), \emph{Package `corpcor'}, R
@@ -263,7 +267,7 @@
 #' @import Matrix osqp methods
 #'
 octrec <- function(basef, m, C, comb, res, Ut, nb, mse = TRUE, corpcor = FALSE,
-                   type = "M", sol = "direct", keep = "list", nn = FALSE,
+                   type = "M", sol = "direct", keep = "list", v = NULL, nn = FALSE,
                    nn_type = "osqp", settings = list(), bounds = NULL, W = NULL, Omega = NULL) {
 
   if(missing(comb)){
@@ -283,16 +287,17 @@ octrec <- function(basef, m, C, comb, res, Ut, nb, mse = TRUE, corpcor = FALSE,
 #' @export
 octrec.default <- function(basef, m, C, comb, res, Ut, nb, mse = TRUE,
                            corpcor = FALSE, type = "M", sol = "direct",
-                           keep = "list", nn = FALSE, nn_type = "osqp",
-                           settings = osqpSettings(), bounds = NULL,
-                           W = NULL, Omega = NULL) {
+                           keep = "list", v = NULL, nn = FALSE,
+                           nn_type = "osqp", settings = osqpSettings(),
+                           bounds = NULL, W = NULL, Omega = NULL) {
   if (missing(m)) {
     stop("The argument m is not specified", call. = FALSE)
   }
 
   comb <- match.arg(comb, c(
     "ols", "struc", "sam", "wlsv", "wlsh", "shr",
-    "acov", "Ssam", "Sshr", "bdshr", "bdsam", "w", "omega"))
+    "acov", "Ssam", "Sshr", "bdshr", "bdsam", "w", "omega",
+    "cs_struc", "t_struc"))
 
   type <- match.arg(type, c("M", "S"))
   keep <- match.arg(keep, c("list", "recf"))
@@ -319,7 +324,7 @@ octrec.default <- function(basef, m, C, comb, res, Ut, nb, mse = TRUE,
   na <- ctf$hts$na
   nb <- ctf$hts$nb
   #C <- ctf$hts$C
-  #S <- ctf$hts$S
+  Scs <- ctf$hts$S
   #Ut <- ctf$hts$Ut
 
   kset <- ctf$thf$kset
@@ -327,6 +332,7 @@ octrec.default <- function(basef, m, C, comb, res, Ut, nb, mse = TRUE,
   p <- ctf$thf$p
   kt <- ctf$thf$kt
   ks <- ctf$thf$ks
+  R <- ctf$thf$R
 
   # matrix
   #Zt <- tools$Zt
@@ -336,7 +342,7 @@ octrec.default <- function(basef, m, C, comb, res, Ut, nb, mse = TRUE,
   }
 
   Ht <- ctf$ctf$Ht
-  S <- ctf$ctf$Stilde
+  S <- ctf$ctf$Fmat
 
   # Base forecast
   if (NCOL(basef) %% kt != 0) {
@@ -351,15 +357,15 @@ octrec.default <- function(basef, m, C, comb, res, Ut, nb, mse = TRUE,
 
   if(is.null(S)){
     if (type == "S") {
-      stop("Type = S needs the cross-sectional C matrix. \nPlease consider using ut2c() to get the right C when working with Ut.", call. = FALSE)
+      stop("Type = S needs the cross-sectional C matrix. \nPlease consider using gecoma() to get the right C when working with Ut.", call. = FALSE)
     }
 
     if(nn_type == "sntz"){
-      stop("nn_type = sntz needs the cross-sectional C matrix.\nPlease consider using ut2c() to get the right C when working with Ut.", call. = FALSE)
+      stop("nn_type = sntz needs the cross-sectional C matrix.\nPlease consider using gecoma() to get the right C when working with Ut.", call. = FALSE)
     }
 
-    if (comb == "struc") {
-      stop("Param comb equal struc needs the cross-sectional C matrix.\nPlease consider using ut2c() to get the right C when working with Ut.", call. = FALSE)
+    if (comb == "struc" | comb == "cs_struc") {
+      stop("comb = ", comb, " needs the cross-sectional C matrix.\nPlease consider using gecoma() to get the right C when working with Ut.", call. = FALSE)
     }
   }
 
@@ -410,75 +416,87 @@ octrec.default <- function(basef, m, C, comb, res, Ut, nb, mse = TRUE,
   }
 
   if (corpcor) {
-    shr_mod <- function(x, ...) corpcor::cov.shrink(x, verbose = FALSE, ...)
+    shr_mod <- function(x, ...) Matrix(unclass(corpcor::cov.shrink(x, verbose = FALSE, lambda.var=0, ...)))
   } else {
     shr_mod <- function(x, ...) shrink_estim(x, minT = mse)[[1]]
   }
 
   switch(comb,
-    ols = {
-      Omega <- .sparseDiagonal(n * kt)
-    },
-    struc = {
-      Omega <- .sparseDiagonal(x = rowSums(S))
-    },
-    sam = {
-      Omega <- cov_mod(E)
-    },
-    wlsh = {
-      Omega <- .sparseDiagonal(x = diag(cov_mod(E)))
-    },
-    wlsv = {
-      var_freq <- apply(res, 1, function(z) sapply(kset, function(x) cov_mod(z[rep(kset, (m/kset) * N) == x])))
-      Omega <- .sparseDiagonal(x = rep(as.vector(var_freq), rep((m/kset), n)))
-    },
-    shr = {
-      Omega <- shr_mod(E)
-    },
-    acov = {
-      mat1 <- bdiag(rep(lapply((m/kset), function(x) matrix(1, nrow = x, ncol = x)), n))
-      cov <- cov_mod(E)
-      Omega <- cov * mat1
-    },
-    Ssam = {
-      mat1 <- bdiag(replicate(n, matrix(1, nrow = kt, ncol = kt), simplify = FALSE))
-      cov <- cov_mod(E)
-      Omega <- cov * mat1
-    },
-    Sshr = {
-      shrink <- lapply(1:n, function(x) shr_mod(E[, rep(1:n, each = kt) == x]))
-      Omega <- bdiag(shrink)
-    },
-    w = {
-      if (is.null(W)) {
-        stop("Please, put in option W your covariance matrix", call. = FALSE)
-      }
-      P <- commat(n, kt)
-      Omega <- P %*% W %*% t(P)
-    },
-    omega = {
-      if (is.null(Omega)) {
-        stop("Please, put in option Omega your covariance matrix", call. = FALSE)
-      }
-      Omega <- Omega
-    },
-    bdshr = {
-      blockW <- lapply(kset, function(x) shr_mod(t(res[, rep(kset, N * (m/kset)) == x])))
-      blockW <- rep(blockW, (m/kset))
-      P <- commat(n, kt)
-      Omega <- P %*% bdiag(blockW) %*% t(P)
-    },
-    bdsam = {
-      blockW <- lapply(kset, function(x) cov_mod(t(res[, rep(kset, N * (m/kset)) == x])))
-      blockW <- rep(blockW, (m/kset))
-      P <- commat(n, kt)
-      Omega <- P %*% bdiag(blockW) %*% t(P)
-    }
+         ols = {
+           Omega <- .sparseDiagonal(n * kt)
+         },
+         struc = {
+           Omega <- .sparseDiagonal(x = rowSums(S))
+         },
+         "cs_struc" = {
+           Omega <- .sparseDiagonal(x = rep(rowSums(Scs), each = kt))
+         },
+         "t_struc" = {
+           Omega <- .sparseDiagonal(x = rep(rowSums(R), n))
+         },
+         sam = {
+           Omega <- cov_mod(E)
+         },
+         wlsh = {
+           Omega <- .sparseDiagonal(x = diag(cov_mod(E)))
+         },
+         wlsv = {
+           var_freq <- apply(res, 1, function(z) sapply(kset, function(x) cov_mod(z[rep(kset, (m/kset) * N) == x])))
+           Omega <- .sparseDiagonal(x = rep(as.vector(var_freq), rep((m/kset), n)))
+         },
+         shr = {
+           Omega <- shr_mod(E)
+         },
+         acov = {
+           mat1 <- bdiag(rep(lapply((m/kset), function(x) matrix(1, nrow = x, ncol = x)), n))
+           cov <- cov_mod(E)
+           Omega <- cov * mat1
+         },
+         Ssam = {
+           mat1 <- bdiag(replicate(n, matrix(1, nrow = kt, ncol = kt), simplify = FALSE))
+           cov <- cov_mod(E)
+           Omega <- cov * mat1
+         },
+         Sshr = {
+           shrink <- lapply(1:n, function(x) shr_mod(E[, rep(1:n, each = kt) == x]))
+           Omega <- bdiag(shrink)
+         },
+         w = {
+           if (is.null(W)) {
+             stop("Please, put in option W your covariance matrix", call. = FALSE)
+           }
+           P <- commat(n, kt)
+           Omega <- P %*% W %*% t(P)
+         },
+         omega = {
+           if (is.null(Omega)) {
+             stop("Please, put in option Omega your covariance matrix", call. = FALSE)
+           }
+           Omega <- Omega
+         },
+         bdshr = {
+           blockW <- lapply(kset, function(x) shr_mod(t(res[, rep(kset, N * (m/kset)) == x])))
+           blockW <- rep(blockW, (m/kset))
+           P <- commat(n, kt)
+           Omega <- P %*% bdiag(blockW) %*% t(P)
+         },
+         bdsam = {
+           blockW <- lapply(kset, function(x) cov_mod(t(res[, rep(kset, N * (m/kset)) == x])))
+           blockW <- rep(blockW, (m/kset))
+           P <- commat(n, kt)
+           Omega <- P %*% bdiag(blockW) %*% t(P)
+         }
   )
 
   b_pos <- c(rep(0, na * kt), rep(rep(kset, (m/kset)), nb) == 1)
 
-  if (type == "S") {
+  if(!is.null(v)){
+    keep <- "recf"
+    rec_sol <- recoV(
+      basef = Ybase, W = Omega, Ht = Ht, sol = sol, nn = nn, keep = keep, S = S, type = type,
+      settings = settings, b_pos = b_pos, bounds = bounds, nn_type = nn_type, v = v
+    )
+  }else if (type == "S") {
     rec_sol <- recoS(
       basef = Ybase, W = Omega, S = S, sol = sol, nn = nn, keep = keep,
       settings = settings, b_pos = b_pos, bounds = bounds, nn_type = nn_type
@@ -508,11 +526,11 @@ octrec.default <- function(basef, m, C, comb, res, Ut, nb, mse = TRUE,
 
     rownames(rec_sol$recf) <- if (is.null(rownames(basef))) paste("serie", 1:n, sep = "") else rownames(basef)
     colnames(rec_sol$recf) <- paste("k", rep(kset, h * (m/kset)), "h",
-      do.call("c", as.list(sapply(
-        (m/kset) * h,
-        function(x) seq(1:x)
-      ))),
-      sep = ""
+                                    do.call("c", as.list(sapply(
+                                      (m/kset) * h,
+                                      function(x) seq(1:x)
+                                    ))),
+                                    sep = ""
     )
     return(rec_sol)
   } else {
@@ -520,22 +538,22 @@ octrec.default <- function(basef, m, C, comb, res, Ut, nb, mse = TRUE,
       rec_sol$recf <- matrix(t(Dh) %*% as.vector(t(rec_sol$recf)), nrow = n, byrow = TRUE)
       rownames(rec_sol$recf) <- if (is.null(rownames(basef))) paste("serie", 1:n, sep = "") else rownames(basef)
       colnames(rec_sol$recf) <- paste("k", rep(kset, h * (m/kset)), "h",
-        do.call("c", as.list(sapply(
-          (m/kset) * h,
-          function(x) seq(1:x)
-        ))),
-        sep = ""
+                                      do.call("c", as.list(sapply(
+                                        (m/kset) * h,
+                                        function(x) seq(1:x)
+                                      ))),
+                                      sep = ""
       )
       return(rec_sol$recf)
     } else {
       rec_sol$recf <- matrix(t(Dh) %*% as.vector(t(rec_sol$recf)), nrow = n, byrow = TRUE)
       rownames(rec_sol$recf) <- if (is.null(rownames(basef))) paste("serie", 1:n, sep = "") else rownames(basef)
       colnames(rec_sol$recf) <- paste("k", rep(kset, h * (m/kset)), "h",
-        do.call("c", as.list(sapply(
-          (m/kset) * h,
-          function(x) seq(1:x)
-        ))),
-        sep = ""
+                                      do.call("c", as.list(sapply(
+                                        (m/kset) * h,
+                                        function(x) seq(1:x)
+                                      ))),
+                                      sep = ""
       )
       return(rec_sol)
     }

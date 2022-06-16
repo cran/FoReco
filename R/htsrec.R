@@ -9,7 +9,7 @@
 #' et al. (2011). Moreover, the classic bottom-up approach is available.
 #'
 #' @usage htsrec(basef, comb, C, res, Ut, nb, mse = TRUE, corpcor = FALSE,
-#'        type = "M", sol = "direct", keep = "list", nn = FALSE,
+#'        type = "M", sol = "direct", keep = "list",  v = NULL, nn = FALSE,
 #'        nn_type = "osqp", settings = list(), bounds = NULL, W = NULL)
 #'
 #' @param basef (\mjseqn{h \times n}) matrix of base forecasts to be reconciled;
@@ -71,6 +71,8 @@
 #' (Stellato et al., 2019).
 #' @param bounds (\mjseqn{n \times 2}) matrix containing the cross-sectional bounds:
 #' the first column is the lower bound, and the second column is the upper bound.
+#' @param v vector index of the fixed base forecast (\mjseqn{\mbox{min}(v) > 0}
+#' and \mjseqn{\mbox{max}(v) < n}).
 #'
 #' @details
 #' \loadmathjax
@@ -213,9 +215,9 @@
 #' Byron, R.P. (1978), The estimation of large social accounts matrices,
 #' \emph{Journal of the Royal Statistical Society A}, 141, 3, 359-367.
 #'
-#' Di Fonzo, T., Girolimetto, D. (2020), Cross-Temporal Forecast Reconciliation:
-#' Optimal Combination Method and Heuristic Alternatives, Department of Statistical
-#' Sciences, University of Padua, \href{https://arxiv.org/abs/2006.08570}{arXiv:2006.08570}.
+#' Di Fonzo, T., and Girolimetto, D. (2021), Cross-temporal forecast reconciliation:
+#' Optimal combination method and heuristic alternatives, \emph{International Journal
+#' of Forecasting}, in press.
 #'
 #' Di Fonzo, T., Marini, M. (2011), Simultaneous and two-step reconciliation of
 #' systems of time series: methodological and practical issues,
@@ -283,7 +285,7 @@
 #' @import Matrix osqp methods
 #'
 htsrec <- function(basef, comb, C, res, Ut, nb, mse = TRUE, corpcor = FALSE,
-                   type = "M", sol = "direct", keep = "list", nn = FALSE,
+                   type = "M", sol = "direct", keep = "list", v = NULL, nn = FALSE,
                    nn_type = "osqp", settings = list(), bounds = NULL, W = NULL){
 
   if(missing(comb)){
@@ -297,7 +299,7 @@ htsrec <- function(basef, comb, C, res, Ut, nb, mse = TRUE, corpcor = FALSE,
 
 #' @export
 htsrec.default <- function(basef, comb, C, res, Ut, nb, mse = TRUE, corpcor = FALSE,
-                           type = "M", sol = "direct", keep = "list", nn = FALSE,
+                           type = "M", sol = "direct", keep = "list", v = NULL, nn = FALSE,
                            nn_type = "osqp", settings = list(), bounds = NULL, W) {
 
   comb <- match.arg(comb, c("bu", "ols", "struc", "wls", "shr", "sam", "w"))
@@ -313,8 +315,6 @@ htsrec.default <- function(basef, comb, C, res, Ut, nb, mse = TRUE, corpcor = FA
   if (NCOL(basef) == 1) {
     basef <- t(basef)
   }
-
-  n <- NCOL(basef)
 
   # Using Ut or C
   if (missing(C)) {
@@ -356,8 +356,8 @@ htsrec.default <- function(basef, comb, C, res, Ut, nb, mse = TRUE, corpcor = FA
     }
   }
 
-  if (NCOL(basef) != n) {
-    stop("Incorrect dimension of Ut or basef (they don't have same columns).", call. = FALSE)
+  if ((NCOL(basef) != n & comb != "bu") | ((NCOL(basef) != nb & NCOL(basef) != n) & comb == "bu")) {
+    stop("Incorrect dimension of Ut, C or basef.", call. = FALSE)
   }
 
   if (any(comb == c("wls", "shr", "sam"))) {
@@ -377,17 +377,20 @@ htsrec.default <- function(basef, comb, C, res, Ut, nb, mse = TRUE, corpcor = FA
   }
 
   if (corpcor) {
-    shr_mod <- function(x, ...) corpcor::cov.shrink(x, verbose = FALSE, ...)
+    shr_mod <- function(x, ...) Matrix(unclass(corpcor::cov.shrink(x, verbose = FALSE, lambda.var=0, ...)))
   } else {
     shr_mod <- function(x, ...) shrink_estim(x, minT = mse)[[1]]
   }
 
   switch(comb,
          bu = {
-           if (n != nb) {
+           if (NCOL(basef) != nb) {
              basef_bu <- basef[, (na + 1):n]
-             names_bu <- if (is.null(colnames(basef))) paste("serie", 1:n, sep = "") else colnames(basef)
+           }else{
+             basef_bu <- basef
            }
+
+           names_bu <- if (is.null(colnames(basef))) paste("serie", 1:n, sep = "") else colnames(basef)
 
            if(nn){
              basef_bu <- basef_bu * (basef_bu > 0)
@@ -433,12 +436,18 @@ htsrec.default <- function(basef, comb, C, res, Ut, nb, mse = TRUE, corpcor = FA
 
   b_pos <- c(rep(0, na), rep(1, nb))
 
-  if (type == "S") {
+  if(!is.null(v)){
+    keep <- "recf"
+    rec_sol <- recoV(
+      basef = basef, W = W, Ht = Ut, sol = sol, nn = nn, keep = keep, S = S, type = type,
+      settings = settings, b_pos = b_pos, bounds = bounds, nn_type = nn_type, v = v
+    )
+  }else if(type == "S"){
     rec_sol <- recoS(
       basef = basef, W = W, S = S, sol = sol, nn = nn, keep = keep,
       settings = settings, b_pos = b_pos, bounds = bounds, nn_type = nn_type
     )
-  } else {
+  }else{
     rec_sol <- recoM(
       basef = basef, W = W, Ht = Ut, sol = sol, nn = nn, keep = keep, S = S,
       settings = settings, b_pos = b_pos, bounds = bounds, nn_type = nn_type
@@ -537,3 +546,4 @@ extract_data <- function(x, name){
     NA
   }
 }
+

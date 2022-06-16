@@ -162,8 +162,8 @@ recoS <- function(basef, W, S, sol = "direct", nn = FALSE, settings, b_pos = NUL
   nn_type <- match.arg(nn_type, c("osqp", "sntz"))
 
   if(!is.null(bounds)){
-    if(!is.matrix(bounds) | NCOL(bounds) != 2 | NROW(bounds) != NCOL(basef)){
-      stop("bounds must be a matrix (", NCOL(basef), "x2)", call. = FALSE)
+    if(!is.matrix(bounds) | NCOL(bounds) != 2 | NROW(bounds) != sum(b_pos)){
+      stop("With type = S, bounds must be a (", sum(b_pos), " x 2) matrix with only the high-frequency bts constrains", call. = FALSE)
     } else {
       sol <- "osqp"
     }
@@ -401,10 +401,13 @@ S_osqp <- function(y, q = NULL, P = NULL, S = NULL, nn = NULL,
   }
 
   if(!is.null(bounds)){
+    if(NROW(bounds) > c){
+      stop("With type = S, bounds must be a (", c, " x 2) matrix of the bounds on the high-frequency bts", call. = FALSE)
+    }
     bounds_rows <- rowSums(abs(bounds) == Inf) < 2
-    A <- .sparseDiagonal(c)[bounds_rows, ]
-    l <- bounds[bounds_rows, 1, drop = TRUE]
-    u <- bounds[bounds_rows, 2, drop = TRUE]
+    A <- rbind(A, .sparseDiagonal(c)[bounds_rows, ])
+    l <- c(l, bounds[bounds_rows, 1, drop = TRUE])
+    u <- c(u, bounds[bounds_rows, 2, drop = TRUE])
   }
 
   if(length(settings)==0){
@@ -581,4 +584,112 @@ solveLin <- function(msx, mdx, verb = FALSE) {
       backsolve(chol(msx), mdx)
     })
   })
+}
+
+# recoV <- function(basef, W, Ht, sol = "direct", nn = FALSE, nn_type = "osqp",
+#                   settings, b_pos = NULL, keep = "list", bounds = NULL, S, v){
+#   sol <- match.arg(sol, c("direct", "osqp"))
+#   nn_type <- match.arg(nn_type, c("osqp", "fbpp", "KAnn", "sntz"))
+#
+#   if(sol != "direct"){
+#     stop('Only sol = "direct" is available', call. = FALSE)
+#   }
+#
+#   if(max(v) > NCOL(basef)){
+#     stop('max(v) must be less or equal to ', NCOL(basef), call. = FALSE)
+#   }
+#
+#   Vcons <- .sparseDiagonal(NCOL(basef))[v, ,drop = FALSE]
+#   vcons <- basef[,v, drop = FALSE]
+#   Vt <- rbind(Ht, Vcons)
+#   vc <- cbind(Matrix(0, nrow = NROW(vcons), ncol = NROW(Ht)), vcons)
+#   switch(sol,
+#          direct = {
+#            out <- list()
+#
+#            lm_dx <- methods::as(t(vc) - Vt %*% t(basef), "CsparseMatrix")
+#            lm_sx <- Matrix::Matrix(Vt %*% W %*% t(Vt), sparse = TRUE, forceCheck = TRUE)
+#            out$recf <- t(t(basef) + W %*% t(Vt) %*% solveLin(lm_sx, lm_dx))
+#          }
+#   )
+#   return(out)
+# }
+
+recoV <- function(basef, W, Ht, sol = "direct", nn = FALSE, nn_type = "osqp", type = "M",
+                  settings, b_pos = NULL, keep = "list", bounds = NULL, S, v){
+  sol <- match.arg(sol, c("direct", "osqp"))
+  nn_type <- match.arg(nn_type, c("osqp", "sntz"))
+
+  if(sol != "direct"){
+    stop('Only sol = "direct" is available', call. = FALSE)
+  }
+
+  if(max(v) > NCOL(basef)){
+    stop('max(v) must be less or equal to ', NCOL(basef), call. = FALSE)
+  }
+
+  Vcons <- .sparseDiagonal(NCOL(basef))[v, ,drop = FALSE]
+  vcons <- basef[,v, drop = FALSE]
+  Vt <- rbind(Ht, Vcons)
+  vc <- cbind(Matrix(0, nrow = NROW(vcons), ncol = NROW(Ht)), vcons)
+
+  switch(sol,
+         direct = {
+           out <- list()
+           if(type == "M"){
+             lm_dx <- methods::as(t(vc) - Vt %*% t(basef), "CsparseMatrix")
+             lm_sx <- Matrix::Matrix(Vt %*% W %*% t(Vt), sparse = TRUE, forceCheck = TRUE)
+             out$recf <- t(t(basef) + W %*% t(Vt) %*% solveLin(lm_sx, lm_dx))
+           }else{
+             stop("Type = S not yet available",call. = FALSE)
+           }
+
+           if(nn & any(out$recf[,-v, drop = FALSE] < (-sqrt(.Machine$double.eps)))){
+             vbounds <- array(Inf, dim = list(NCOL(basef), 2, NROW(basef)))
+             vbounds[,1,] <- -vbounds[,1,]
+             vbounds[v,1,] <- vbounds[v,2,] <- t(basef[,v])
+
+             if(any(out$recf[,v, drop = FALSE] < (-sqrt(.Machine$double.eps)))){
+               warning("The immutable forecasts present negative values", call. = FALSE)
+             }
+
+             switch(nn_type,
+                    osqp = {
+                      if(isDiagonal(W)){
+                        P <- .sparseDiagonal(x = diag(W)^(-1))
+                      }else{
+                        R <- chol(W)
+                        P <- chol2inv(R)
+                      }
+                      id <- which(rowSums(out$recf<(-sqrt(.Machine$double.eps)))!=0)
+                      rec <- lapply(id, function(x){
+                        M_osqp(y = basef[x,], Ht = Ht, P = P, nn = nn,
+                               bounds = vbounds[,,x], settings = settings, b_pos = b_pos[!(b_pos %in% v)])
+                      })
+                      rec <- do.call("rbind",rec)
+                      out$recf[id,] <- do.call("rbind", rec[,"recf"])
+                      out$info <- do.call("rbind", rec[,"info"])
+                      colnames(out$info) <- c("obj_val", "run_time", "iter", "pri_res",
+                                              "status", "status_polish")
+                      rownames(out$info) <- id
+
+                      out$recf[-id,-v,drop=FALSE] <- out$recf[-id,-v,drop=FALSE] * (out$recf[-id,-v,drop=FALSE] > 0)
+                    },
+                    sntz = {
+                      na <- NROW(S)-NCOL(S)
+                      bottom <- out$recf[,-c(1:na),drop = FALSE]
+                      bottom[,-v, drop = FALSE] <- bottom[,-v, drop = FALSE]*(bottom[,-v, drop = FALSE] > 0)
+                      out$recf <- bottom %*% t(S)
+                    })
+           }else{
+             if(nn){
+               if(any(out$recf[,v, drop = FALSE] < (-sqrt(.Machine$double.eps)))){
+                 warning("The immutable forecasts present negative values", call. = FALSE)
+               }
+               out$recf[,-v, drop = FALSE] <- out$recf[,-v, drop = FALSE] * (out$recf[,-v, drop = FALSE] > 0)
+             }
+           }
+         }
+  )
+  return(out)
 }

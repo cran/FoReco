@@ -1,4 +1,19 @@
+# FoReco 0.2.4
+
+##### Major changes
+* Added `lcmat()` function.
+
+##### Minor changes
+* Fixed BU approach when the number of columns of basef is equal to the number of bottom time series `htsrec()`;
+* Fixed `score_index()`;
+* Fixed the `bounds` param when `type = "S"` in `htsrec()`, `thfrec()` and `octrec()`;
+* Add the possibility to fix base forecasts through the `v` param in `htsrec()`, `thfrec()` and `octrec()` - experimental;
+* Add two new type of optimal cross-temporal reconciliation (**cs_struc** and **t_struc**);
+* Improved docs and bug fixes.
+
 # FoReco 0.2.2
+
+##### Minor changes
 * Fixed documentation;
 * Removed `ut2c()` and `srref()`.
 
@@ -21,7 +36,7 @@
 
 ##### Minor changes
 * Now in `octrec()` it is also possible to introduce the **Ω** covariance matrix variant through the `Omega` parameter and not only the **W** variant with the `W` parameter;
-* Updated `tcsrec()`, `cstrec()` and `iterec()`. In the iterec function the `maxit` parameter has been replaced by `itmax`, however for the moment `maxit` is still supported;
+* Updated `tcsrec()`, `cstrec()` and `iterec()`. In the `iterec()` function the `maxit` parameter has been replaced by `itmax`, however for the moment `maxit` is still supported;
 * Now FoReco removes null rows from the cross-sectional aggregation matrix **C** and it warns the user if the balanced version of an unbalanced hierarchy is considering duplicated variables;
 * Redesigned the console output and added a new convergence norm as *default* for `iterec()` (`norm` parameter).
 

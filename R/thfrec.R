@@ -8,7 +8,7 @@
 #' bottom-up approach is available.
 #'
 #' @usage thfrec(basef, m, comb, res, mse = TRUE, corpcor = FALSE,
-#'        type = "M", sol = "direct", keep = "list", nn = FALSE,
+#'        type = "M", sol = "direct", keep = "list", v = NULL, nn = FALSE,
 #'         nn_type = "osqp", settings = list(), bounds = NULL, Omega = NULL)
 #'
 #' @param basef (\mjseqn{h(k^\ast + m) \times 1}) vector of base forecasts to be
@@ -74,6 +74,8 @@
 #' (Stellato et al., 2019).
 #' @param bounds (\mjseqn{(k^\ast + m) \times 2}) matrix with temporal bounds: the
 #' first column is the lower bound, and the second column is the upper bound.
+#' @param v vector index of the fixed base forecast (\mjseqn{\mbox{min}(v) > 0}
+#' and \mjseqn{\mbox{max}(v) < (k^\ast + m)}).
 #'
 #' @details
 #' \loadmathjax
@@ -193,9 +195,9 @@
 #' Byron, R.P. (1978), The estimation of large social accounts matrices,
 #' \emph{Journal of the Royal Statistical Society A}, 141, 3, 359-367.
 #'
-#' Di Fonzo, T., Girolimetto, D. (2020), Cross-Temporal Forecast Reconciliation:
-#' Optimal Combination Method and Heuristic Alternatives, Department of Statistical
-#' Sciences, University of Padua, \href{https://arxiv.org/abs/2006.08570}{arXiv:2006.08570}.
+#' Di Fonzo, T., and Girolimetto, D. (2021), Cross-temporal forecast reconciliation:
+#' Optimal combination method and heuristic alternatives, \emph{International Journal
+#' of Forecasting}, in press.
 #'
 #' Hyndman, R.J., Ahmed, R.A., Athanasopoulos, G., Shang, H.L. (2011), Optimal combination
 #' forecasts for hierarchical time series, \emph{Computational Statistics & Data
@@ -236,7 +238,7 @@
 #' @import Matrix osqp
 #'
 thfrec <- function(basef, m, comb, res, mse = TRUE, corpcor = FALSE,
-                   type = "M", sol = "direct", keep = "list", nn = FALSE,
+                   type = "M", sol = "direct", keep = "list", v = NULL, nn = FALSE,
                    nn_type = "osqp", settings = list(), bounds = NULL, Omega = NULL) {
 
   if(missing(comb)){
@@ -250,7 +252,7 @@ thfrec <- function(basef, m, comb, res, mse = TRUE, corpcor = FALSE,
 
 #' @export
 thfrec.default <- function(basef, m, comb, res, mse = TRUE, corpcor = FALSE,
-                           type = "M", sol = "direct", keep = "list", nn = FALSE,
+                           type = "M", sol = "direct", keep = "list", v = NULL, nn = FALSE,
                            nn_type = "osqp", settings = list(), bounds = NULL, Omega) {
   # m condition
   if (missing(m)) {
@@ -339,7 +341,7 @@ thfrec.default <- function(basef, m, comb, res, mse = TRUE, corpcor = FALSE,
   }
 
   if (corpcor) {
-    shr_mod <- function(x, ...) corpcor::cov.shrink(x, verbose = FALSE, ...)
+    shr_mod <- function(x, ...) Matrix(unclass(corpcor::cov.shrink(x, verbose = FALSE, lambda.var=0, ...)))
   } else {
     shr_mod <- function(x, ...) shrink_estim(x, minT = mse)[[1]]
   }
@@ -347,100 +349,106 @@ thfrec.default <- function(basef, m, comb, res, mse = TRUE, corpcor = FALSE,
   # Reconciliation
 
   switch(comb,
-    bu = {
-      if (NCOL(BASEF) != m) {
-        BASEF <- BASEF[, (ks + 1):kt]
-      }
+         bu = {
+           if (NCOL(BASEF) != m) {
+             BASEF <- BASEF[, (ks + 1):kt]
+           }
 
-      if(nn){
-        BASEF <- BASEF * (BASEF > 0)
-      }
-      OUTF <- BASEF %*% t(R)
+           if(nn){
+             BASEF <- BASEF * (BASEF > 0)
+           }
+           OUTF <- BASEF %*% t(R)
 
-      outf <- as.vector(t(Dh) %*% as.vector(t(OUTF)))
+           outf <- as.vector(t(Dh) %*% as.vector(t(OUTF)))
 
-      outf <- stats::setNames(outf, paste("k", rep(kset, h * (m/kset)), "h",
-        do.call("c", as.list(sapply(
-          (m/kset) * h,
-          function(x) seq(1:x)
-        ))),
-        sep = ""
-      ))
-      if (keep == "list") {
-        return(list(
-          recf = outf, R = R,
-          M = R %*% cbind(matrix(0, m, ks), diag(m))
-        ))
-      } else {
-        return(outf)
-      }
-    },
-    ols =
-      Omega <- .sparseDiagonal(kt),
-    struc =
-      Omega <- .sparseDiagonal(x = rowSums(R)),
-    wlsv = {
-      var_freq <- sapply(kset, function(x) cov_mod(res[rep(kset, (m/kset) * N) == x]))
-      Omega <- .sparseDiagonal(x = rep(var_freq, (m/kset)))
-    },
-    wlsh = {
-      diagO <- diag(cov_mod(RES))
-      Omega <- .sparseDiagonal(x = diagO)
-    },
-    acov = {
-      Omega <- Matrix::bdiag(lapply(kset, function(x) cov_mod(RES[, rep(kset, (m/kset)) == x])))
-    },
-    strar1 = {
-      rho <- lapply(kset, function(x) stats::acf(stats::na.omit(res[rep(kset, (m/kset) * N) == x]),
-                                                 1, plot = F)$acf[2, 1, 1])
-      expo <- lapply((m/kset), function(x) toeplitz(1:x) - 1)
+           outf <- stats::setNames(outf, paste("k", rep(kset, h * (m/kset)), "h",
+                                               do.call("c", as.list(sapply(
+                                                 (m/kset) * h,
+                                                 function(x) seq(1:x)
+                                               ))),
+                                               sep = ""
+           ))
+           if (keep == "list") {
+             return(list(
+               recf = outf, R = R,
+               M = R %*% cbind(matrix(0, m, ks), diag(m))
+             ))
+           } else {
+             return(outf)
+           }
+         },
+         ols =
+           Omega <- .sparseDiagonal(kt),
+         struc =
+           Omega <- .sparseDiagonal(x = rowSums(R)),
+         wlsv = {
+           var_freq <- sapply(kset, function(x) cov_mod(res[rep(kset, (m/kset) * N) == x]))
+           Omega <- .sparseDiagonal(x = rep(var_freq, (m/kset)))
+         },
+         wlsh = {
+           diagO <- diag(cov_mod(RES))
+           Omega <- .sparseDiagonal(x = diagO)
+         },
+         acov = {
+           Omega <- Matrix::bdiag(lapply(kset, function(x) cov_mod(RES[, rep(kset, (m/kset)) == x])))
+         },
+         strar1 = {
+           rho <- lapply(kset, function(x) stats::acf(stats::na.omit(res[rep(kset, (m/kset) * N) == x]),
+                                                      1, plot = F)$acf[2, 1, 1])
+           expo <- lapply((m/kset), function(x) toeplitz(1:x) - 1)
 
-      Gam <- Matrix::bdiag(Map(function(x, y) x^y, x = rho, y = expo))
-      Ostr2 <- .sparseDiagonal(x = apply(R, 1, sum))^0.5
-      Omega <- Ostr2 %*% Gam %*% Ostr2
-    },
-    sar1 = {
-      rho <- lapply(kset, function(x) stats::acf(stats::na.omit(res[rep(kset, (m/kset) * N) == x]),
-                                                 1, plot = F)$acf[2, 1, 1])
-      expo <- lapply((m/kset), function(x) toeplitz(1:x) - 1)
+           Gam <- Matrix::bdiag(Map(function(x, y) x^y, x = rho, y = expo))
+           Ostr2 <- .sparseDiagonal(x = apply(R, 1, sum))^0.5
+           Omega <- Ostr2 %*% Gam %*% Ostr2
+         },
+         sar1 = {
+           rho <- lapply(kset, function(x) stats::acf(stats::na.omit(res[rep(kset, (m/kset) * N) == x]),
+                                                      1, plot = F)$acf[2, 1, 1])
+           expo <- lapply((m/kset), function(x) toeplitz(1:x) - 1)
 
-      Gam <- Matrix::bdiag(Map(function(x, y) x^y, x = rho, y = expo))
-      var_freq <- sapply(kset, function(x) cov_mod(res[rep(kset, (m/kset) * N) == x]))
-      Os2 <- .sparseDiagonal(x = rep(var_freq, (m/kset)))^0.5
-      Omega <- Os2 %*% Gam %*% Os2
-    },
-    har1 = {
-      rho <- lapply(kset, function(x) stats::acf(stats::na.omit(res[rep(kset, (m/kset) * N) == x]),
-                                                 1, plot = F)$acf[2, 1, 1])
-      expo <- lapply((m/kset), function(x) toeplitz(1:x) - 1)
+           Gam <- Matrix::bdiag(Map(function(x, y) x^y, x = rho, y = expo))
+           var_freq <- sapply(kset, function(x) cov_mod(res[rep(kset, (m/kset) * N) == x]))
+           Os2 <- .sparseDiagonal(x = rep(var_freq, (m/kset)))^0.5
+           Omega <- Os2 %*% Gam %*% Os2
+         },
+         har1 = {
+           rho <- lapply(kset, function(x) stats::acf(stats::na.omit(res[rep(kset, (m/kset) * N) == x]),
+                                                      1, plot = F)$acf[2, 1, 1])
+           expo <- lapply((m/kset), function(x) toeplitz(1:x) - 1)
 
-      Gam <- Matrix::bdiag(Map(function(x, y) x^y, x = rho, y = expo))
-      diagO <- diag(cov_mod(RES))
-      Oh2 <- .sparseDiagonal(x = diagO)^0.5
-      Omega <- Matrix::Matrix(Oh2 %*% Gam %*% Oh2)
-    },
-    shr = {
-      Omega <- shr_mod(RES)
-    },
-    sam = {
-      Omega <- cov_mod(RES)
-    },
-    omega = {
-      if (is.null(Omega)) {
-        stop("Please, put in option Omega your covariance matrix", call. = FALSE)
-      }
-      Omega <- Omega
-    }
+           Gam <- Matrix::bdiag(Map(function(x, y) x^y, x = rho, y = expo))
+           diagO <- diag(cov_mod(RES))
+           Oh2 <- .sparseDiagonal(x = diagO)^0.5
+           Omega <- Matrix::Matrix(Oh2 %*% Gam %*% Oh2)
+         },
+         shr = {
+           Omega <- shr_mod(RES)
+         },
+         sam = {
+           Omega <- cov_mod(RES)
+         },
+         omega = {
+           if (is.null(Omega)) {
+             stop("Please, put in option Omega your covariance matrix", call. = FALSE)
+           }
+           Omega <- Omega
+         }
   )
 
   b_pos <- c(rep(0, kt - m), rep(1, m))
 
-  if (type == "S") {
+  if(!is.null(v)){
+    keep <- "recf"
+    rec_sol <- recoV(
+      basef = BASEF, W = Omega, Ht = Zt, sol = sol, nn = nn, keep = keep, S = R, type = type,
+      settings = settings, b_pos = b_pos, bounds = bounds, nn_type = nn_type, v = v
+    )
+  }else if(type == "S"){
     rec_sol <- recoS(
       basef = BASEF, W = Omega, S = R, sol = sol, nn = nn, keep = keep,
       settings = settings, b_pos = b_pos, bounds = bounds, nn_type = nn_type
     )
-  } else {
+  }else{
     rec_sol <- recoM(
       basef = BASEF, W = Omega, Ht = Zt, sol = sol, nn = nn, keep = keep, S = R,
       settings = settings, b_pos = b_pos, bounds = bounds, nn_type = nn_type
@@ -461,32 +469,32 @@ thfrec.default <- function(basef, m, comb, res, mse = TRUE, corpcor = FALSE,
     rec_sol <- rec_sol[names_list[order(match(names_list, names_all_list))]]
 
     rec_sol$recf <- stats::setNames(rec_sol$recf, paste("k", rep(kset, h * (m/kset)), "h",
-      do.call("c", as.list(sapply(
-        (m/kset) * h,
-        function(x) seq(1:x)
-      ))),
-      sep = ""
+                                                        do.call("c", as.list(sapply(
+                                                          (m/kset) * h,
+                                                          function(x) seq(1:x)
+                                                        ))),
+                                                        sep = ""
     ))
     return(rec_sol)
   } else {
     if (length(rec_sol) == 1) {
       rec_sol$recf <- as.vector(t(Dh) %*% as.vector(t(rec_sol$recf)))
       rec_sol$recf <- stats::setNames(rec_sol$recf, paste("k", rep(kset, h * (m/kset)), "h",
-        do.call("c", as.list(sapply(
-          (m/kset) * h,
-          function(x) seq(1:x)
-        ))),
-        sep = ""
+                                                          do.call("c", as.list(sapply(
+                                                            (m/kset) * h,
+                                                            function(x) seq(1:x)
+                                                          ))),
+                                                          sep = ""
       ))
       return(rec_sol$recf)
     } else {
       rec_sol$recf <- as.vector(t(Dh) %*% as.vector(t(rec_sol$recf)))
       rec_sol$recf <- stats::setNames(rec_sol$recf, paste("k", rep(kset, h * (m/kset)), "h",
-        do.call("c", as.list(sapply(
-          (m/kset) * h,
-          function(x) seq(1:x)
-        ))),
-        sep = ""
+                                                          do.call("c", as.list(sapply(
+                                                            (m/kset) * h,
+                                                            function(x) seq(1:x)
+                                                          ))),
+                                                          sep = ""
       ))
       return(rec_sol)
     }
