@@ -1,7 +1,7 @@
 Type: Package
 Package: FoReco
 Title: Point Forecast Reconciliation
-Version: 0.2.4
+Version: 0.2.5
 Authors@R: 
     c(person(given = "Daniele",
              family = "Girolimetto",
@@ -26,9 +26,9 @@ Encoding: UTF-8
 LazyData: true
 NeedsCompilation: no
 RoxygenNote: 7.2.0
-Packaged: 2022-06-16 08:49:45 UTC; daniele
+Packaged: 2022-07-04 11:02:51 UTC; daniele
 Author: Daniele Girolimetto [aut, cre, fnd],
   Tommaso Di Fonzo [aut, fnd]
 Maintainer: Daniele Girolimetto <daniele.girolimetto@phd.unipd.it>
 Repository: CRAN
-Date/Publication: 2022-06-16 09:10:02 UTC
+Date/Publication: 2022-07-04 11:20:03 UTC
