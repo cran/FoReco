@@ -92,9 +92,9 @@
 #' table when the expected marginal totals are known, \emph{The Annals of Mathematical
 #' Statistics}, 11, 4, 427–444.
 #'
-#' Di Fonzo, T., and Girolimetto, D. (2021), Cross-temporal forecast reconciliation:
+#' Di Fonzo, T., and Girolimetto, D. (2023), Cross-temporal forecast reconciliation:
 #' Optimal combination method and heuristic alternatives, \emph{International Journal
-#' of Forecasting}, in press.
+#' of Forecasting}, 39(1), 39-57.
 #'
 #' Johnston, R.J., Pattie, C.J. (1993), Entropy-Maximizing and the Iterative Proportional
 #' Fitting Procedure, \emph{The Professional Geographer}, 45, 3, 317–322.
@@ -829,7 +829,7 @@ step_hts <- function(basef, kset, h, res, arg_input, hts_comb) {
 
   Y <- lapply(kset, function(x) basef[, rep(kset, (max(kset)/kset) * h) == x, drop = FALSE])
 
-  if (missing(res)) {
+  if (is.null(res)) {
     Y1 <- lapply(Y, function(x){
       obj <- do.call("htsrec", c(list(basef = t(x), comb = hts_comb, keep = "recf"),
                                  arg_input[which(names(arg_input) %in% arg_hts)]))
